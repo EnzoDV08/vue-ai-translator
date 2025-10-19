@@ -30,16 +30,47 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue';
+import { ref } from 'vue';
 
-  const inputText = ref('');
-  const targetLang = ref('fr');
-  const translatedText = ref('');
-  const loading = ref(false);
+const inputText = ref('');
+const targetLang = ref('fr');
+const translatedText = ref('');
+const loading = ref(false);
 
-  const handleTranslate = async () => {
-    //TODO: call service file
-  };
+const SOURCE_LANG = 'en';
+
+function normalize(code) {
+  if (code === 'zh-Hans') return 'zh-CN';
+  return code;
+}
+
+async function translateViaMyMemory(text, fromCode, toCode) {
+  const langpair = `${fromCode}|${toCode}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+    text
+  )}&langpair=${encodeURIComponent(langpair)}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return data?.responseData?.translatedText || 'No translation found.';
+}
+
+const handleTranslate = async () => {
+  translatedText.value = '';
+  if (!inputText.value.trim()) return;
+
+  loading.value = true;
+  try {
+    const to = normalize(targetLang.value);
+    translatedText.value = await translateViaMyMemory(inputText.value, SOURCE_LANG, to);
+  } catch (e) {
+    console.error(e);
+    alert(e.message || 'Unable to translate text.');
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -85,7 +116,7 @@
   
   .output {
     margin-top: 30px;
-    background-color: #f8f8f8;
+    background-color: #4a4a4a;
     padding: 20px;
     border-radius: 8px;
   }
